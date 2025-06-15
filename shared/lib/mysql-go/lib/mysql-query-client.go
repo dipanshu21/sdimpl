@@ -22,7 +22,7 @@ func ExecuteMySqlQueryWithNewConnection(query string, args ...interface{}) (sql.
 	return result, nil
 }
 
-func ExecuteMySqlQuery(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
+func ExecuteMySqlQuerySELECT(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
 	// Execute the query
 	result, err := db.Query(query, args...)
 	if err != nil {
@@ -30,4 +30,14 @@ func ExecuteMySqlQuery(db *sql.DB, query string, args ...interface{}) (*sql.Rows
 	}
 
 	return result, nil
+}
+
+func ExecuteMySqlQueryINSERTOrDELETE(db *sql.DB, query string, args ...interface{}) error {
+	// Execute the query
+	_, err := db.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
