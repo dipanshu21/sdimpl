@@ -5,13 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"sort"
 	"sync/atomic"
 )
 
 const (
-	MACHINES_TO_START_WITH = 20
-	NUM_OF_KEYS            = 10000
+	MACHINES_TO_START_WITH = 1000
+	NUM_OF_KEYS            = 1000000
 )
 
 var machineIdCounter int64 = 1
@@ -132,30 +133,80 @@ func assignKeysForMachines(machines []Machine, keys []string) map[int64][]string
 	return machineToKeyCountMap
 }
 
+func calculateAndPrintStats(machineToKeyMap map[int64][]string) {
+	keys := make([]int, 0)
+
+	for _, keyArr := range machineToKeyMap {
+		keys = append(keys, len(keyArr))
+	}
+
+	n := float64(len(keys))
+	if n == 0 {
+		return
+	}
+
+	// Calculate mean
+	var sum int
+	for _, k := range keys {
+		sum += k
+	}
+	mean := float64(sum) / n
+
+	// Calculate standard deviation
+	var variance float64
+	for _, k := range keys {
+		diff := float64(k) - mean
+		variance += diff * diff
+	}
+	stdDev := math.Sqrt(variance / n)
+
+	// Calculate imbalance ratio
+	var imbalance float64 = 0
+	if mean != 0 {
+		imbalance = stdDev / mean
+	}
+
+	fmt.Printf("Mean: %.2f\n", mean)
+	fmt.Printf("Standard Deviation: %.2f\n", stdDev)
+
+	//Ideally we want the imbalance ratio lower than 0.2
+	fmt.Printf("Imbalance Ratio: %.2f\n", imbalance)
+}
+
 func main() {
 	machines := generateRandomMachineList(MACHINES_TO_START_WITH)
 	keys := generateKeyList(NUM_OF_KEYS)
-
 	machineToKeyCountMap := assignKeysForMachines(machines, keys)
-
 	printMap(machineToKeyCountMap)
+	calculateAndPrintStats(machineToKeyCountMap)
 
-	newMachines := generateRandomMachineList(2)
+	// newMachines := generateRandomMachineList(2)
 
-	fmt.Println("==================================")
+	// fmt.Println("==================================")
 
-	machineToKeyCountMap = assignKeysForMachines(append(machines, newMachines...), keys)
-	printMap(machineToKeyCountMap)
+	// machineToKeyCountMap = assignKeysForMachines(append(machines, newMachines...), keys)
+	// printMap(machineToKeyCountMap)
 }
 
 func printMap(machineToKeyMap map[int64][]string) {
+	type MachinePrintInfo struct {
+		MachineId int
+		Keys      []string
+	}
+	var machineList []MachinePrintInfo = make([]MachinePrintInfo, 0)
+
 	for machineId, keyArr := range machineToKeyMap {
-		fmt.Println("Machine: ", machineId)
-		if len(keyArr) == 0 {
-			fmt.Println("No keys assigned")
-		} else {
-			fmt.Println("Keys assigned: ", len(keyArr))
-			//fmt.Println("Keys: ", keyArr)
-		}
+		machineList = append(machineList, MachinePrintInfo{
+			MachineId: int(machineId),
+			Keys:      keyArr,
+		})
+	}
+
+	sort.Slice(machineList, func(i, j int) bool {
+		return machineList[i].MachineId < machineList[j].MachineId
+	})
+
+	for _, machine := range machineList {
+		fmt.Println("Machine: ", machine.MachineId, " Keys: ", len(machine.Keys))
 	}
 }
